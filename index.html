@@ -330,7 +330,7 @@
 
     <!-- 6. RSVP 出席回函表單 Section -->
     <section id="rsvp" class="py-16 sm:py-24 px-4 bg-morandi-warmBg">
-        <div class="max-w-xl mx-auto bg-white rounded-3xl p-6 sm:p-10 shadow-md border border-amber-100/60">
+        <div class="relative max-w-xl mx-auto bg-white rounded-3xl p-6 sm:p-10 shadow-md border border-amber-100/60 overflow-hidden">
             <div class="text-center mb-8">
                 <span class="font-eng text-xs sm:text-sm tracking-widest text-morandi-gold uppercase">Join Our Celebration</span>
                 <h2 class="text-2xl sm:text-3xl font-normal mt-1 text-morandi-textDark">出席回函</h2>
@@ -338,11 +338,11 @@
             </div>
 
             <!-- 無跳轉後台提交技術：透過 Iframe onload 偵測送出成功 -->
-            <iframe name="hidden_iframe" id="hidden_iframe" style="display:none;" onload="if(window.submitted) { showThankYouModal(); }"></iframe>
+            <iframe name="hidden_iframe" id="hidden_iframe" style="display:none;" onload="if(window.submitted) { showSuccess(); }"></iframe>
 
-            <form id="weddingForm" action="https://docs.google.com/forms/d/e/1FAIpQLScc58DD25fc4RL9g7RG-1Ah8-VIk1E9U522jIN3nn_PWGZPSw/formResponse" method="POST" target="hidden_iframe" onsubmit="window.submitted=true;" class="space-y-6">
+            <form id="weddingForm" action="https://docs.google.com/forms/d/e/1FAIpQLScc58DD25fc4RL9g7RG-1Ah8-VIk1E9U522jIN3nn_PWGZPSw/formResponse" method="POST" target="hidden_iframe" onsubmit="return validateForm();" class="space-y-6">
                 
-                <!-- 必填：姓名 (entry.2047345391) -->
+                <!-- 必填：姓名 -->
                 <div>
                     <label class="block text-xs font-semibold tracking-wider text-gray-600 uppercase mb-2">
                         請問您的大名 <span class="font-eng text-gray-400">Your name</span> <span class="text-red-400">*</span>
@@ -385,6 +385,7 @@
                             <option value="新娘親戚">新娘親戚</option>
                             <option value="新娘高中同學">新娘高中同學</option>
                             <option value="新娘大學同學">新娘大學同學</option>
+                            <option value="新娘朋友">新娘朋友</option>
                             <option value="共同朋友">共同朋友</option>
                         </select>
                     </div>
@@ -402,7 +403,7 @@
                         <label class="block text-xs font-semibold tracking-wider text-gray-600 uppercase mb-1.5">
                             總出席人數 <span class="font-eng text-gray-400">Number of attendees</span> <span class="text-red-400">*</span>
                         </label>
-                        <select id="inputTotal" name="entry.1188616045" required class="w-full h-12 px-4 rounded-xl border border-gray-200 focus:border-morandi-gold focus:ring-1 focus:ring-morandi-gold outline-none transition bg-white">
+                        <select id="inputTotal" name="entry.1188616045" required onchange="autoAdjustMeals()" class="w-full h-12 px-4 rounded-xl border border-gray-200 focus:border-morandi-gold focus:ring-1 focus:ring-morandi-gold outline-none transition bg-white">
                             <option value="1位">1位</option>
                             <option value="2位">2位</option>
                             <option value="3位">3位</option>
@@ -416,15 +417,32 @@
                             <label class="block text-xs font-semibold tracking-wider text-gray-600 uppercase mb-1.5">
                                 葷食人數
                             </label>
-                            <input type="number" id="inputMeat" min="0" value="1" inputmode="numeric" name="entry.1766251007" class="w-full h-12 px-4 rounded-xl border border-gray-200 focus:border-morandi-gold focus:ring-1 focus:ring-morandi-gold outline-none transition bg-gray-50/30">
+                            <select id="inputMeat" name="entry.1766251007" onchange="clearMealError()" class="w-full h-12 px-4 rounded-xl border border-gray-200 focus:border-morandi-gold focus:ring-1 focus:ring-morandi-gold outline-none transition bg-white">
+                                <option value="0" selected>0</option>
+                                <option value="1">1</option>
+                                <option value="2">2</option>
+                                <option value="3">3</option>
+                                <option value="4">4</option>
+                            </select>
                         </div>
                         <div>
                             <label class="block text-xs font-semibold tracking-wider text-gray-600 uppercase mb-1.5">
                                 素食人數
                             </label>
-                            <input type="number" id="inputVeg" min="0" value="0" inputmode="numeric" name="entry.630238932" class="w-full h-12 px-4 rounded-xl border border-gray-200 focus:border-morandi-gold focus:ring-1 focus:ring-morandi-gold outline-none transition bg-gray-50/30">
+                            <select id="inputVeg" name="entry.630238932" onchange="clearMealError()" class="w-full h-12 px-4 rounded-xl border border-gray-200 focus:border-morandi-gold focus:ring-1 focus:ring-morandi-gold outline-none transition bg-white">
+                                <option value="0" selected>0</option>
+                                <option value="1">1</option>
+                                <option value="2">2</option>
+                                <option value="3">3</option>
+                                <option value="4">4</option>
+                            </select>
                         </div>
                     </div>
+                    <!-- 錯誤提示訊息 -->
+                    <p id="mealErrorMsg" class="hidden text-xs text-red-500 font-medium tracking-wider flex items-center gap-1 mt-1">
+                        <i class="fa-solid fa-circle-exclamation"></i>
+                        <span>葷食與素食人數加總不可超過總出席人數！</span>
+                    </p>
 
                     <!-- 兒童座椅 (entry.1535829381) -->
                     <div>
@@ -456,13 +474,14 @@
                         <input type="hidden" id="inputInvitation" name="entry.2080928339" value="需要，請寄電子喜帖給我 Yes, I need digital wedding invitation">
                     </div>
                 </div>
-<!-- 電子郵件/地址 (entry.1521896031) - 動態連動隱藏/顯示 -->
-                    <div id="emailContainer">
-                        <label class="block text-xs font-semibold tracking-wider text-gray-600 uppercase mb-1.5">
-                            電子郵件 / Email <span class="font-eng text-gray-400">EMAIL</span> <span class="text-red-400">*</span>
-                        </label>
-                        <input type="email" id="inputEmail" name="entry.1521896031" required placeholder="example@email.com" class="w-full h-12 px-4 rounded-xl border border-gray-200 focus:border-morandi-gold focus:ring-1 focus:ring-morandi-gold outline-none transition bg-gray-50/30">
-                    </div>
+
+                <!-- 電子郵件/地址 (entry.1521896031) - 動態連動隱藏/顯示 -->
+                <div id="emailContainer">
+                    <label class="block text-xs font-semibold tracking-wider text-gray-600 uppercase mb-1.5">
+                        電子郵件 / Email <span class="font-eng text-gray-400">EMAIL</span> <span class="text-red-400">*</span>
+                    </label>
+                    <input type="email" id="inputEmail" name="entry.1521896031" required placeholder="example@email.com" class="w-full h-12 px-4 rounded-xl border border-gray-200 focus:border-morandi-gold focus:ring-1 focus:ring-morandi-gold outline-none transition bg-gray-50/30">
+                </div>
 
                 <!-- 祝福的話 (entry.1299100011) -->
                 <div>
@@ -473,50 +492,35 @@
                 </div>
 
                 <!-- 送出按鈕 -->
-                <button type="submit" id="submitBtn" class="w-full h-12 rounded-xl bg-morandi-gold text-white font-medium tracking-widest text-sm hover:bg-morandi-gold/90 active:scale-98 transition duration-200 shadow-md touch-manipulation">
-                    送出回函
+                <button type="submit" id="submitBtn" class="w-full h-12 rounded-xl bg-morandi-gold text-white font-medium tracking-widest text-sm hover:bg-morandi-gold/90 active:scale-98 transition duration-200 shadow-md touch-manipulation flex items-center justify-center gap-2">
+                    <span>送出回函</span>
+                    <i class="fa-solid fa-paper-plane text-xs"></i>
                 </button>
             </form>
+
+            <!-- Success Box 成功回饋區域 -->
+            <div id="success_msg" class="hidden absolute inset-0 bg-white flex flex-col items-center justify-center text-center p-10 z-20 rounded-3xl">
+                <div class="w-20 h-20 bg-[#d4a373] rounded-full flex items-center justify-center text-white mb-8 shadow-lg">
+                    <svg class="w-10 h-10" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"></path></svg>
+                </div>
+                <h4 class="text-2xl font-bold mb-4 text-gray-800 tracking-widest">回函已送出</h4>
+                <p class="text-gray-400 leading-loose px-4 text-sm">
+                    感謝您的回覆，我們已收到您的祝福。<br>期待與您分享這份喜悅！
+                </p>
+                <button onclick="window.location.reload()" class="mt-12 text-[10px] tracking-[0.4em] text-[#d4a373] uppercase border-b border-[#d4a373] pb-1 font-bold">Back to Invite</button>
+            </div>
         </div>
     </section>
 
-    <!-- 7. 精美送出成功回饋 Modal 彈窗 (5秒自動消失) -->
-    <div id="thankYouModal" class="fixed inset-0 z-[110] flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm hidden transition-all duration-300">
-        <div class="bg-white rounded-3xl p-8 max-w-sm w-full text-center shadow-2xl border border-amber-100/80 space-y-4 relative">
-            <!-- 手動關閉按鈕 -->
-            <button onclick="closeThankYouModal()" class="absolute top-4 right-4 text-gray-400 hover:text-gray-600 w-8 h-8 rounded-full flex items-center justify-center transition">
-                <i class="fa-solid fa-xmark text-lg"></i>
-            </button>
-
-            <!-- 圖示與標題 -->
-            <div class="w-16 h-16 bg-morandi-gold/10 text-morandi-gold rounded-full flex items-center justify-center mx-auto text-2xl shadow-inner">
-                <i class="fa-solid fa-heart animate-bounce"></i>
-            </div>
-            <div class="space-y-1">
-                <span class="font-eng text-xs text-morandi-gold tracking-widest uppercase">Thank You</span>
-                <h3 class="text-2xl text-morandi-textDark font-medium">感謝您的回覆！</h3>
-            </div>
-            <p class="text-xs text-gray-500 leading-relaxed font-light">
-                已收到您的出席資訊<br>非常期待在婚禮當天與您相聚！
-            </p>
-
-            <div class="pt-2">
-                <button onclick="closeThankYouModal()" class="w-full py-2.5 rounded-xl bg-morandi-warmBg border border-amber-200/60 text-xs font-medium text-morandi-gold hover:bg-amber-50 transition">
-                    關閉視窗 (5秒後自動關閉)
-                </button>
-            </div>
-        </div>
-    </div>
-
     <!-- 8. 頁尾區塊（Footer Section） -->
-    <footer class="py-12 border-t border-gray-200/60 bg-white text-center">
-        <div class="max-w-md mx-auto px-4 space-y-3">
-            <p class="font-eng tracking-widest text-base text-morandi-gold font-light">Wei Chih & Yu Ting</p>
-            <p class="text-[10px] text-gray-400">© 2026 All Rights Reserved.</p>
+    <footer class="py-16 bg-[#8da399] text-white text-center">
+        <div class="max-w-4xl mx-auto px-6">
+            <p class="font-eng tracking-[0.6em] text-xs md:text-sm opacity-90 uppercase mb-4">Wei Chih & Yu Ting</p>
+            <p class="text-[9px] tracking-widest opacity-40 uppercase">© 2026 Adventure of Life. All rights reserved.</p>
         </div>
     </footer>
 
-    <!-- JavaScript 邏輯 (開場動畫, 背景音樂, 影音控制, 表單無跳轉, 5秒Modal, 倒數計時, 智能動態條件連動) -->
+    <!-- JavaScript 邏輯 -->
     <script>
         const bgMusic = document.getElementById('bgMusic');
         const openInvitationBtn = document.getElementById('openInvitationBtn');
@@ -589,11 +593,10 @@
         // 喜帖複選方塊數值連動與 Email 欄位動態顯示/隱藏
         function updateInvitationValue() {
             const checkboxes = document.querySelectorAll('.invitationCheckbox:checked');
-            const hiddenInput = document.getElementById('inputInvitation');
-            const selectedValues = Array.from(checkboxes).map(cb => cb.value);
-            hiddenInput.value = selectedValues.join(', ') || '不需要喜帖';
+            const values = Array.from(checkboxes).map(cb => cb.value);
+            document.getElementById('inputInvitation').value = values.join(', ');
 
-            // 判斷是否有勾選「需要電子喜帖」
+            // 如果勾選「需要電子喜帖」，顯示 Email 輸入欄位
             const checkDigital = document.getElementById('checkDigitalInvitation');
             const emailContainer = document.getElementById('emailContainer');
             const inputEmail = document.getElementById('inputEmail');
@@ -607,27 +610,57 @@
             }
         }
 
-        // 顯示/關閉 Thank You Modal 彈窗 (5秒自動關閉)
-        let modalTimeout;
-        function showThankYouModal() {
-            const modal = document.getElementById('thankYouModal');
-            modal.classList.remove('hidden');
+        // 自動對應/修正餐點人數
+        function autoAdjustMeals() {
+            clearMealError();
+            const totalSelect = document.getElementById('inputTotal').value;
+            const total = parseInt(totalSelect) || 0;
+            const meatInput = document.getElementById('inputMeat');
+            const vegInput = document.getElementById('inputVeg');
+            
+            let meat = parseInt(meatInput.value) || 0;
+            let veg = parseInt(vegInput.value) || 0;
 
-            // 重設表單
-            document.getElementById('weddingForm').reset();
-            toggleConditionalFields(true);
-
-            // 5 秒後自動隱藏
-            clearTimeout(modalTimeout);
-            modalTimeout = setTimeout(() => {
-                closeThankYouModal();
-            }, 5000);
+            if (meat + veg > total) {
+                meatInput.value = total;
+                vegInput.value = 0;
+            }
         }
 
-        function closeThankYouModal() {
-            const modal = document.getElementById('thankYouModal');
-            modal.classList.add('hidden');
-            window.submitted = false;
+        function clearMealError() {
+            const errorMsg = document.getElementById('mealErrorMsg');
+            if (errorMsg) errorMsg.classList.add('hidden');
+        }
+
+        // 表單提交驗證邏輯
+        function validateForm() {
+            const attendanceRadio = document.querySelector('input[name="attendanceRadio"]:checked');
+            if (attendanceRadio && attendanceRadio.value.includes("當然")) {
+                const totalSelect = document.getElementById('inputTotal').value;
+                const total = parseInt(totalSelect) || 0;
+                const meat = parseInt(document.getElementById('inputMeat').value) || 0;
+                const veg = parseInt(document.getElementById('inputVeg').value) || 0;
+
+                if (meat + veg > total) {
+                    const errorMsg = document.getElementById('mealErrorMsg');
+                    if (errorMsg) {
+                        errorMsg.classList.remove('hidden');
+                        errorMsg.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    }
+                    return false; // 阻擋送出
+                }
+            }
+            window.submitted = true;
+            return true;
+        }
+
+        // 顯示成功訊息
+        function showSuccess() {
+            setTimeout(() => {
+                const successMsg = document.getElementById('success_msg');
+                if (successMsg) successMsg.classList.remove('hidden');
+                document.getElementById('rsvp').scrollIntoView({behavior: 'smooth'});
+            }, 500);
         }
 
         // 倒數計時器邏輯
